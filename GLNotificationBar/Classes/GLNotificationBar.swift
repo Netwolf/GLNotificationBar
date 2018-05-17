@@ -105,6 +105,8 @@ open class GLNotificationBar: NSObject {
      Creates and returns a notification bar for displaying an alert to the user.
      An initialized notificatio bar object.
      
+     - Parameter name: Parameter to customize the name of the app that appears on top of the bar
+
      - Parameter title:  The title of the alert. Use this string to get the user’s attention and communicate the reason for the notification.
      
      - Parameter message:   Descriptive text that provides additional details about the reason for the alert.
@@ -116,7 +118,7 @@ open class GLNotificationBar: NSObject {
      - Returns: A inilized GLNotificationBar object.
      */
     
-    @objc public init(title:String!, message :String!, preferredStyle:GLNotificationStyle, handler: ((Bool) -> Void)?) {
+    @objc public init(name: String? = nil, title:String!, message :String!, preferredStyle:GLNotificationStyle, handler: ((Bool) -> Void)?) {
         super.init()
         
         actionArray = [GLNotifyAction]()
@@ -124,10 +126,10 @@ open class GLNotificationBar: NSObject {
         if ((APP_DELEGATE.keyWindow?.subviews) == nil) {
             let time = DispatchTime.now() + Double(Int64(5.0 * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
             DispatchQueue.main.asyncAfter(deadline: time, execute: {
-                self.setUpNotificationBar(title, body: message , notificationStyle:preferredStyle)
+                self.setUpNotificationBar(name: name, header: title, body: message , notificationStyle:preferredStyle)
             })
         }else{
-            setUpNotificationBar(title, body: message , notificationStyle:preferredStyle)
+            setUpNotificationBar(name: name, header: title, body: message , notificationStyle:preferredStyle)
         }
 
         
@@ -250,7 +252,7 @@ open class GLNotificationBar: NSObject {
     }
     
     
-    fileprivate func setUpNotificationBar(_ header:String, body:String, notificationStyle:GLNotificationStyle) {
+    fileprivate func setUpNotificationBar(name: String? = nil, header:String, body:String, notificationStyle:GLNotificationStyle) {
         
         for subView in (APP_DELEGATE.keyWindow?.subviews)! {     //To clear old notification from queue
             if subView is CustomView {
@@ -271,16 +273,20 @@ open class GLNotificationBar: NSObject {
             break
         }
         
-        if header.characters.count == 0 {
+        if header.count == 0 {
             notificationBar.body.text = body
         }else{
             let attributeString = NSMutableAttributedString(string: String("\(header)\n\(body)"))
-            attributeString.addAttributes([NSFontAttributeName:UIFont.boldSystemFont(ofSize: 15)], range: NSRange(location: 0, length: header.characters.count))
+            attributeString.addAttributes([NSFontAttributeName:UIFont.boldSystemFont(ofSize: 15)], range: NSRange(location: 0, length: header.count))
             notificationBar.body.attributedText = attributeString
         }
 
         var infoDic:Dictionary = Bundle.main.infoDictionary!
-        appName = infoDic["CFBundleName"] as? String
+        if name == nil {
+            appName = infoDic["CFBundleName"] as? String
+        } else {
+            appName = name
+        }
         notificationBar.header.text = appName
         
         if infoDic["CFBundleIcons"] != nil {
@@ -312,7 +318,7 @@ open class GLNotificationBar: NSObject {
         UIView.animate(withDuration: 0.5, delay: 0.0, options: .curveEaseOut, animations: {
             let frame:CGRect!
             if deviceHeight == 812 { // If iPhone X yPosition shoud be heigh
-                frame = CGRect(x: 0, y: 35, width: frameWidth, height: BAR_HEIGHT)
+                frame = CGRect(x: 0, y: 38, width: frameWidth, height: BAR_HEIGHT)
             }else{
                 frame = CGRect(x: 0, y: 0, width: frameWidth, height: BAR_HEIGHT)
             }
@@ -483,10 +489,10 @@ class CustomView : UIView {
         let rangeStr = tempContainer[0]
         let attributeString = NSMutableAttributedString(string: body)
         if body.contains("\n") {
-            attributeString.addAttributes([NSFontAttributeName:UIFont.boldSystemFont(ofSize: 15)], range: NSRange(location: 0, length: rangeStr.characters.count))
-            attributeString.addAttributes([NSFontAttributeName:UIFont.systemFont(ofSize: 15)], range: NSRange(location: rangeStr.characters.count, length: tempContainer[1].characters.count))
+            attributeString.addAttributes([NSFontAttributeName:UIFont.boldSystemFont(ofSize: 15)], range: NSRange(location: 0, length: rangeStr.count))
+            attributeString.addAttributes([NSFontAttributeName:UIFont.systemFont(ofSize: 15)], range: NSRange(location: rangeStr.count, length: tempContainer[1].count))
         }else{
-            attributeString.addAttributes([NSFontAttributeName:UIFont.systemFont(ofSize: 15)], range: NSRange(location: 0, length: body.characters.count))
+            attributeString.addAttributes([NSFontAttributeName:UIFont.systemFont(ofSize: 15)], range: NSRange(location: 0, length: body.count))
         }
         
         notificationMessage.translatesAutoresizingMaskIntoConstraints = false
@@ -510,7 +516,7 @@ class CustomView : UIView {
         
         //AppIcon
         let appIcon = UIImageView()
-        if appIconName.characters.count != 0 {
+        if appIconName.count != 0 {
             appIcon.image = UIImage(named: appIconName)
         }else{
             appIcon.layer.borderColor = UIColor.gray.cgColor
@@ -663,7 +669,7 @@ class CustomView : UIView {
         if expectedContentheight > APP_DELEGATE.keyWindow!.frame.size.height - 50 {
             messageHeight = String(describing: APP_DELEGATE.keyWindow!.frame.size.height - CGFloat(actionArray.count < 4 ? actionArray.count * 50 : 200))
         }
-        if messageHeight.characters.count > 0 {
+        if messageHeight.count > 0 {
             let verticalConstraint = NSLayoutConstraint.constraints(withVisualFormat: "V:|-15-[header_Label(20)]-[separator(1)]-[container_Label(h@750)]-(>=5)-|", options: [], metrics: ["h":messageHeight], views: viewDic)
             allConstraints += verticalConstraint
         }else{
